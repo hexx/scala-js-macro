@@ -1,7 +1,7 @@
 import llc4.js._
 
 object Example extends App {
-  js {
+  val j = js {
     def sum(from: Int, to: Int) = {
       var i = from
       var a = 0
@@ -14,4 +14,5 @@ object Example extends App {
 
     val a = sum(1, 10)
   }
+  println(llc4.Printer.print(j, 0))
 }
