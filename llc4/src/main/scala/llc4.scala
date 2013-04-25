@@ -25,6 +25,7 @@ case class JsIfStmt(cond: JsExpr, `then`: JsStmt, `else`: Option[JsStmt]) extend
 case class JsWhileStmt(cond: JsExpr, body: JsStmt) extends JsStmt
 case class JsVarDefStmt(identifier: String, initializer: JsExpr, isConst: Boolean) extends JsStmt
 case class JsFunDeclStmt(identifier: String, params: List[String], body: JsStmt) extends JsStmt
+case class JsReturnStmt(jsExpr: JsExpr) extends JsStmt
 
 package object js {
   def js(expr: Any): JsAst = macro js_impl
@@ -144,8 +145,17 @@ package object js {
       case DefDef(_, name, _, List(vparams), _, rhs) =>
         val identifier = c.literal(name.encoded)
         val params = listOfExprToExprOfList(vparams.map(v => c.literal(v.name.encoded)))
-        val body = if (isUnitLiteral(rhs)) reify(JsEmptyStmt) else toJsStmt(rhs)
+        val body = if (isUnitLiteral(rhs)) reify(JsEmptyStmt) else toJsBody(rhs)
         reify(JsFunDeclStmt(identifier.splice, params.splice, body.splice))
+    }
+
+    lazy val toJsReturnStmt: ToExpr[JsReturnStmt] = toJsExpr andThen (jsExpr => reify(JsReturnStmt(jsExpr.splice)))
+
+    lazy val toJsBodyStmt: ToExpr[JsBlockStmt] = {
+      case Block(init, last) =>
+        val lastExpr = if (isUnitLiteral(last)) reify(JsEmptyStmt) else toJsReturn(last)
+        val stmts = listOfExprToExprOfList(init.map(toJsStmt) :+ lastExpr)
+        reify(JsBlockStmt(stmts.splice))
     }
 
     lazy val toJsExpr: ToExpr[JsExpr] = Seq(
@@ -168,6 +178,10 @@ package object js {
       toJsVarDefStmt,
       toJsFunDeclStmt
     ) reduceLeft (_ orElse _)
+
+    lazy val toJsReturn: ToExpr[JsStmt] = toJsReturnStmt orElse toJsStmt
+
+    lazy val toJsBody: ToExpr[JsStmt] = toJsBodyStmt orElse toJsStmt
 
     val toJsAst: PartialFunction[Tree, Expr[JsAst]] = toJsExpr orElse toJsStmt
 

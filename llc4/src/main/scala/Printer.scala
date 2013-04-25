@@ -19,6 +19,7 @@ object Printer {
       case JsWhileStmt(cond, body)                  => s"while (${p(cond)}) ${p(body)}"
       case JsVarDefStmt(identifier, initializer, _) => s"var ${identifier} = ${p(initializer)}"
       case JsFunDeclStmt(identifier, params, body)  => s"""function ${identifier}(${params.mkString(", ")}) ${p(body)}"""
+      case JsReturnStmt(jsExpr)                     => s"return ${p(jsExpr)}"
     }
   }
 }
